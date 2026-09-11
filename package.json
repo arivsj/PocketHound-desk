@@ -1,0 +1,24 @@
+{
+  "name": "pockethound-desk",
+  "version": "0.1.0",
+  "private": true,
+  "description": "PocketHound desk — o lado PC do PocketHound: liga o DeepSeek Harness ao seu celular por P2P, transmite o que o agente produz e deixa você aprovar tudo do bolso.",
+  "main": "src/main.js",
+  "type": "commonjs",
+  "scripts": {
+    "start": "electron .",
+    "dev": "electron . --dev",
+    "selftest": "node .dev/self-test.mjs",
+    "p2p:init": "python3 src/transport/p2p/bridge.py --init",
+    "p2p:serve": "python3 src/transport/p2p/bridge.py --serve",
+    "p2p:status": "python3 src/transport/p2p/bridge.py --status",
+    "p2p:selftest": "python3 src/transport/p2p/selftest.py"
+  },
+  "devDependencies": {
+    "electron": "^33.0.0"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "qrcode": "^1.5.4"
+  }
+}

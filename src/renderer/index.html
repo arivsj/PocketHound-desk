@@ -1,0 +1,290 @@
+<!doctype html>
+<html lang="pt-BR">
+<head>
+  <meta charset="utf-8" />
+  <meta http-equiv="Content-Security-Policy"
+        content="default-src 'self'; script-src 'self'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com; img-src 'self' data:; connect-src 'none'; object-src 'none'; base-uri 'self'; form-action 'none'" />
+  <title>PocketHound</title>
+  <link rel="stylesheet" href="style.css" />
+</head>
+<body>
+  <!-- ------------------------------------------------------------ titlebar -->
+  <header class="ph-titlebar">
+    <span class="ph-titlebar__title">Pocket<b>Hound</b> · desk</span>
+    <span class="ph-titlebar__spacer"></span>
+    <div class="ph-tb-buttons">
+      <button class="ph-tb-btn" id="winMin" type="button" title="Minimizar" aria-label="Minimizar">–</button>
+      <button class="ph-tb-btn" id="winMax" type="button" title="Maximizar" aria-label="Maximizar">▢</button>
+      <button class="ph-tb-btn ph-tb-btn--close" id="winClose" type="button" title="Fechar" aria-label="Fechar">✕</button>
+    </div>
+  </header>
+
+  <!-- ------------------------------------------------------------- sidebar -->
+  <aside class="ph-sidebar">
+    <div class="ph-logo">Pocket<b>Hound</b></div>
+
+    <nav class="ph-nav" aria-label="Seções">
+      <button class="ph-nav__item is-active" data-page="painel" type="button">
+        <span class="ph-nav__icon" aria-hidden="true">◆</span> Painel
+      </button>
+      <button class="ph-nav__item" data-page="sessoes" type="button">
+        <span class="ph-nav__icon" aria-hidden="true">⬡</span> Sessões
+      </button>
+      <button class="ph-nav__item" data-page="aprovacoes" type="button">
+        <span class="ph-nav__icon" aria-hidden="true">⚿</span> Aprovações
+        <span class="ph-nav__badge" id="navBadge" hidden>0</span>
+      </button>
+      <button class="ph-nav__item" data-page="transporte" type="button">
+        <span class="ph-nav__icon" aria-hidden="true">⇄</span> Transporte
+      </button>
+      <button class="ph-nav__item" data-page="dispositivos" type="button">
+        <span class="ph-nav__icon" aria-hidden="true">▤</span> Dispositivos
+      </button>
+      <button class="ph-nav__item" data-page="ajustes" type="button">
+        <span class="ph-nav__icon" aria-hidden="true">⚙</span> Ajustes
+      </button>
+    </nav>
+
+    <div class="ph-monitor">
+      <canvas class="ph-monitor__canvas" id="rain" aria-hidden="true"></canvas>
+      <div class="ph-monitor__content">
+        <div class="ph-monitor__row">
+          <span class="ph-monitor__label">CPU</span>
+          <span class="ph-monitor__value is-mute" id="mCpu">—</span>
+        </div>
+        <div class="ph-monitor__row">
+          <span class="ph-monitor__label">RAM</span>
+          <span class="ph-monitor__value is-mute" id="mRam">—</span>
+        </div>
+        <div class="ph-monitor__row">
+          <span class="ph-monitor__label">Temp</span>
+          <span class="ph-monitor__value is-mute" id="mTemp">—</span>
+        </div>
+        <div class="ph-monitor__row">
+          <span class="ph-monitor__label">Carga</span>
+          <span class="ph-monitor__value is-mute" id="mLoad">—</span>
+        </div>
+      </div>
+    </div>
+
+    <div class="ph-card ph-card--tight">
+      <span class="ph-card__label">Ponte do Harness</span>
+      <span class="ph-status is-offline" id="bridgeStatus">
+        <span class="ph-status__dot"></span><span id="bridgeStatusText">offline</span>
+      </span>
+    </div>
+  </aside>
+
+  <!-- ---------------------------------------------------------------- main -->
+  <main class="ph-main">
+
+    <!-- Painel --------------------------------------------------------- -->
+    <section class="ph-page is-active" id="page-painel">
+      <div class="ph-page__head">
+        <h1>Painel</h1>
+        <span class="ph-muted" id="painelHint">conectando…</span>
+      </div>
+
+      <div class="ph-grid">
+        <div class="ph-card">
+          <span class="ph-card__label">Ponte do Harness</span>
+          <div class="ph-card__value" id="cBridge">—</div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-card__label">Sessões vivas</span>
+          <div class="ph-card__value" id="cSessions">—</div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-card__label">Celulares</span>
+          <div class="ph-card__value" id="cPhones">—</div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-card__label">Aprovações pendentes</span>
+          <div class="ph-card__value" id="cPending">—</div>
+        </div>
+        <div class="ph-card ph-col-span">
+          <span class="ph-card__label">Fluxo do agente</span>
+          <div class="ph-card__value ph-card__value--sm" id="cLastFrame">aguardando quadros</div>
+        </div>
+      </div>
+
+      <h2 class="ph-section-title">Sessões recentes</h2>
+      <div class="ph-list" id="painelSessions"></div>
+
+      <h2 class="ph-section-title">Últimos quadros</h2>
+      <div class="ph-card ph-col-span" style="padding:0; overflow:hidden;">
+        <table class="ph-table">
+          <thead><tr><th>seq</th><th>tipo</th><th>sessão</th><th>quando</th></tr></thead>
+          <tbody id="frameRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Sessões -------------------------------------------------------- -->
+    <section class="ph-page" id="page-sessoes">
+      <div class="ph-page__head">
+        <h1>Sessões</h1>
+        <span class="ph-muted">o que o Harness está trabalhando agora</span>
+      </div>
+      <div class="ph-list" id="sessionList"></div>
+    </section>
+
+    <!-- Aprovações ----------------------------------------------------- -->
+    <section class="ph-page" id="page-aprovacoes">
+      <div class="ph-page__head">
+        <h1>Aprovações</h1>
+        <span class="ph-muted">o celular decide; aqui você só acompanha</span>
+      </div>
+
+      <h2 class="ph-section-title">Pendentes agora</h2>
+      <div class="ph-list" id="pendingList"></div>
+
+      <h2 class="ph-section-title">Histórico de decisões</h2>
+      <div class="ph-card" style="padding:0; overflow:hidden;">
+        <table class="ph-table">
+          <thead><tr><th>ferramenta</th><th>desfecho</th><th>por</th><th>quando</th></tr></thead>
+          <tbody id="historyRows"></tbody>
+        </table>
+      </div>
+
+      <h2 class="ph-section-title">Regras “não perguntar de novo”</h2>
+      <div class="ph-list" id="ruleList"></div>
+    </section>
+
+    <!-- Transporte ----------------------------------------------------- -->
+    <section class="ph-page" id="page-transporte">
+      <div class="ph-page__head">
+        <h1>Transporte</h1>
+        <span class="ph-muted">como o celular chega até aqui</span>
+      </div>
+
+      <div class="ph-grid">
+        <div class="ph-card">
+          <span class="ph-card__label">Escuta</span>
+          <div class="ph-card__value ph-card__value--sm" id="tListen">—</div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-card__label">Celulares</span>
+          <div class="ph-card__value" id="tPhones">—</div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-card__label">Quadros no anel</span>
+          <div class="ph-card__value" id="tRing">—</div>
+        </div>
+        <div class="ph-card">
+          <span class="ph-card__label">Cursor</span>
+          <div class="ph-card__value" id="tCursor">—</div>
+        </div>
+      </div>
+
+      <h2 class="ph-section-title">Quadros por segundo</h2>
+      <div class="ph-card">
+        <div class="ph-chart" id="trafficChart"></div>
+        <span class="ph-muted" id="trafficHint">sem tráfego medido ainda</span>
+      </div>
+
+      <h2 class="ph-section-title">Caminho</h2>
+      <div class="ph-card">
+        <table class="ph-table">
+          <tbody>
+            <tr><td class="ph-muted">Celular → PC</td><td><code id="pathIn">—</code></td></tr>
+            <tr><td class="ph-muted">PC → Harness</td><td><code>loopback · ponte do plugin</code></td></tr>
+            <tr><td class="ph-muted">Harness → PC</td><td><code>SSE · session/event</code></td></tr>
+            <tr><td class="ph-muted">Replay</td><td><code>seq monotônico + subscribe(cursor)</code></td></tr>
+            <tr><td class="ph-muted">Contrapressão</td><td><code id="pathDrop">—</code></td></tr>
+            <tr><td class="ph-muted">Túnel P2P</td><td><code id="pathP2p">—</code></td></tr>
+            <tr><td class="ph-muted">Relay</td><td><code id="pathRelay">—</code></td></tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Dispositivos --------------------------------------------------- -->
+    <section class="ph-page" id="page-dispositivos">
+      <div class="ph-page__head">
+        <h1>Dispositivos</h1>
+        <span class="ph-muted">quem pode falar com este PC</span>
+      </div>
+
+      <div class="ph-btn-row">
+        <button class="ph-btn" id="btnPair" type="button">Parear novo dispositivo</button>
+      </div>
+
+      <div class="ph-card" style="padding:0; overflow:hidden;">
+        <table class="ph-table">
+          <thead><tr><th>nome</th><th>pareado em</th><th>visto por último</th><th>estado</th><th></th></tr></thead>
+          <tbody id="deviceRows"></tbody>
+        </table>
+      </div>
+    </section>
+
+    <!-- Ajustes -------------------------------------------------------- -->
+    <section class="ph-page" id="page-ajustes">
+      <div class="ph-page__head">
+        <h1>Ajustes</h1>
+        <span class="ph-muted">preferências deste PC</span>
+      </div>
+
+      <div class="ph-grid">
+        <div class="ph-card ph-col-span">
+          <div class="ph-field">
+            <label for="cfgPort">Porta do servidor do celular</label>
+            <input class="ph-input" id="cfgPort" type="number" min="1024" max="65535" />
+          </div>
+          <div class="ph-field">
+            <label for="cfgTimeout">Prazo de uma aprovação no celular (ms)</label>
+            <input class="ph-input" id="cfgTimeout" type="number" min="5000" max="600000" step="5000" />
+          </div>
+          <div class="ph-field">
+            <label for="cfgMode">Modo de transporte</label>
+            <select class="ph-select" id="cfgMode">
+              <option value="auto">Automático — tenta direto, cai para P2P</option>
+              <option value="direct">Somente direto — mesma rede</option>
+              <option value="p2p">Somente P2P — sempre pelo túnel</option>
+            </select>
+          </div>
+          <div class="ph-switch">
+            <span>Anunciar na rede local (farol UDP)</span>
+            <input type="checkbox" id="cfgAdvertise" />
+          </div>
+          <div class="ph-switch">
+            <span>Chuva de caracteres</span>
+            <input type="checkbox" id="cfgRain" />
+          </div>
+          <div class="ph-btn-row" style="margin-top:16px">
+            <button class="ph-btn" id="btnSave" type="button">Salvar</button>
+          </div>
+        </div>
+      </div>
+
+      <h2 class="ph-section-title">Registro</h2>
+      <div class="ph-card" style="padding:0; overflow:hidden;">
+        <table class="ph-table">
+          <tbody id="logRows"></tbody>
+        </table>
+      </div>
+    </section>
+  </main>
+
+  <!-- --------------------------------------------------------------- modal -->
+  <div class="ph-overlay" id="pairOverlay" hidden>
+    <div class="ph-modal" role="dialog" aria-modal="true" aria-labelledby="pairTitle">
+      <h2 id="pairTitle">Parear novo dispositivo</h2>
+      <p class="ph-muted">
+        Abra o PocketHound no celular, escolha <b>Parear</b> e leia este código.
+        O QR já traz o endereço e o código — com o túnel ativo, funciona de
+        qualquer rede, não só na mesma.
+      </p>
+      <div class="ph-qr" id="pairQr" hidden></div>
+      <div class="ph-pair-code" id="pairCode">······</div>
+      <p class="ph-muted" id="pairVia"></p>
+      <p class="ph-muted" id="pairExpiry"></p>
+      <div class="ph-btn-row" style="margin-top:18px">
+        <button class="ph-btn ph-btn--ghost" id="btnPairClose" type="button">Fechar</button>
+      </div>
+    </div>
+  </div>
+
+  <script src="app.js"></script>
+</body>
+</html>

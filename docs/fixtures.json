@@ -1,0 +1,408 @@
+{
+  "protocol": 1,
+  "generatedAt": "2026-09-11T18:34:51.676Z",
+  "note": "Quadros canônicos do PocketHound. O app Android desserializa exatamente estes.",
+  "outbound": [
+    {
+      "v": 1,
+      "seq": 1040,
+      "ts": 1757617324113,
+      "type": "hello",
+      "payload": {
+        "name": "workstation",
+        "version": 1,
+        "sessions": [
+          {
+            "id": "session-e13ee8d4-9d1f-4a2b",
+            "title": "Refatorar o transporte",
+            "workspace": "/dev/pockethound",
+            "status": "live"
+          }
+        ],
+        "cursorMax": 1042
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1041,
+      "ts": 1757617324113,
+      "type": "session.upsert",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "id": "session-e13ee8d4-9d1f-4a2b",
+        "title": "Refatorar o transporte",
+        "workspace": "/dev/pockethound",
+        "status": "live",
+        "events": 120
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1041,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "turn.start",
+        "turn": 1,
+        "at": 1757617324113,
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1041,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "user.message",
+        "text": "faz o build e publica",
+        "source": "user",
+        "at": 1757617324113,
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1041,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "step.start",
+        "turn": 1,
+        "step": 1,
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1041,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "reasoning.delta",
+        "turn": 1,
+        "step": 1,
+        "index": 0,
+        "text": "Preciso ver o script de build antes.",
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1041,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "text.delta",
+        "turn": 1,
+        "step": 1,
+        "index": 1,
+        "text": "Vou compilar e publicar. ",
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1042,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "text.done",
+        "turn": 1,
+        "step": 1,
+        "at": 1757617324113,
+        "text": "Vou compilar e publicar. Primeiro o build.",
+        "reasoning": "Preciso ver o script de build antes.",
+        "calls": [
+          {
+            "callId": "call_01H",
+            "name": "bash",
+            "args": {
+              "command": "npm run build"
+            }
+          }
+        ],
+        "usage": {
+          "input": 1840,
+          "output": 96,
+          "total": 1936
+        },
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1043,
+      "ts": 1757617324113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "tool.call",
+        "turn": 1,
+        "step": 1,
+        "at": 1757617324113,
+        "callId": "call_01H",
+        "name": "bash",
+        "args": {
+          "command": "npm run build",
+          "description": "Compila o projeto"
+        },
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1044,
+      "ts": 1757617324113,
+      "type": "approval.request",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "requestId": "req_01HZZ9",
+        "sessionId": "session-e13ee8d4-9d1f-4a2b",
+        "toolName": "bash",
+        "callId": "call_01H",
+        "reason": "O comando escreve fora do workspace.",
+        "args": {
+          "command": "cp -r dist/ /var/www/pockethound"
+        },
+        "digest": "9f21c4ab77e0d138",
+        "expiresAt": 1757617414113
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1045,
+      "ts": 1757617327113,
+      "type": "approval.resolved",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "requestId": "req_01HZZ9",
+        "outcome": "allowed-once",
+        "by": "phone",
+        "toolName": "bash"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1046,
+      "ts": 1757617328113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "tool.result",
+        "turn": 1,
+        "step": 1,
+        "at": 1757617328113,
+        "callId": "call_01H",
+        "isError": false,
+        "text": "build ok\n47 arquivos publicados",
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1047,
+      "ts": 1757617328313,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "todo.write",
+        "at": 1757617328313,
+        "todos": [
+          {
+            "content": "Compilar",
+            "status": "completed"
+          },
+          {
+            "content": "Publicar",
+            "status": "in_progress"
+          }
+        ],
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1048,
+      "ts": 1757617329113,
+      "type": "turn.event",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "kind": "turn.end",
+        "turn": 1,
+        "reason": "completed",
+        "at": 1757617329113,
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "seq": 1049,
+      "ts": 1757617330113,
+      "type": "question.request",
+      "session": "session-e13ee8d4-9d1f-4a2b",
+      "payload": {
+        "requestId": "req_01HZZA",
+        "sessionId": "session-e13ee8d4-9d1f-4a2b",
+        "questions": [
+          {
+            "id": "q1",
+            "question": "Sigo com o deploy?",
+            "header": "Confirmar",
+            "options": [
+              {
+                "label": "Sim, publique"
+              },
+              {
+                "label": "Não, espere"
+              }
+            ]
+          }
+        ],
+        "expiresAt": 1757617624113
+      }
+    },
+    {
+      "v": 1,
+      "seq": 0,
+      "ts": 1757617324113,
+      "type": "desk.state",
+      "payload": {
+        "at": 1757617324113,
+        "hostname": "workstation",
+        "platform": "linux",
+        "release": "6.9.0",
+        "cpuModel": "AMD Ryzen 7",
+        "cores": 16,
+        "uptimeSeconds": 84213,
+        "loadAvg": [
+          0.42,
+          0.61,
+          0.55
+        ],
+        "memTotalMb": 32000,
+        "memUsedMb": 12480,
+        "cpuPercent": 17.4,
+        "temperatureC": 48.5
+      }
+    },
+    {
+      "v": 1,
+      "seq": 0,
+      "ts": 1757617324113,
+      "type": "notice",
+      "payload": {
+        "level": "success",
+        "title": "Build publicado",
+        "body": "47 arquivos foram para produção.",
+        "at": 1757617324113
+      }
+    },
+    {
+      "v": 1,
+      "seq": 0,
+      "ts": 1757617324113,
+      "type": "replay.done",
+      "payload": {
+        "from": 0,
+        "to": 1049
+      }
+    },
+    {
+      "v": 1,
+      "seq": 0,
+      "ts": 1757617324113,
+      "type": "pong",
+      "payload": {
+        "echo": "abc123"
+      }
+    }
+  ],
+  "inbound": [
+    {
+      "v": 1,
+      "type": "hello.ack",
+      "seq": 0,
+      "payload": {
+        "deviceName": "Pixel do Ari",
+        "deviceId": "a1b2c3d4e5f60718",
+        "lastSeq": 1042
+      }
+    },
+    {
+      "v": 1,
+      "type": "subscribe",
+      "seq": 0,
+      "payload": {
+        "cursor": 1042
+      }
+    },
+    {
+      "v": 1,
+      "type": "prompt.send",
+      "seq": 0,
+      "payload": {
+        "sessionId": "session-e13ee8d4-9d1f-4a2b",
+        "text": "agora roda os testes",
+        "mode": "followup"
+      }
+    },
+    {
+      "v": 1,
+      "type": "approval.decide",
+      "seq": 0,
+      "payload": {
+        "requestId": "req_01HZZ9",
+        "outcome": "allowed-once",
+        "remember": true,
+        "rememberAll": false
+      }
+    },
+    {
+      "v": 1,
+      "type": "question.answer",
+      "seq": 0,
+      "payload": {
+        "requestId": "req_01HZZA",
+        "answers": [
+          {
+            "id": "q1",
+            "selected": [
+              "Sim, publique"
+            ]
+          }
+        ]
+      }
+    },
+    {
+      "v": 1,
+      "type": "session.cancel",
+      "seq": 0,
+      "payload": {
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "type": "session.select",
+      "seq": 0,
+      "payload": {
+        "sessionId": "session-e13ee8d4-9d1f-4a2b"
+      }
+    },
+    {
+      "v": 1,
+      "type": "ping",
+      "seq": 0,
+      "payload": {
+        "echo": "abc123"
+      }
+    }
+  ]
+}

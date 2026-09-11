@@ -1,0 +1,29 @@
+node_modules/
+dist/
+out/
+*.log
+
+# Caches locais (o sandbox não deixa usar ~/.npm nem ~/.cache)
+.npm-cache/
+.cache/
+.electron-cache/
+
+# Capturas de tela do desenvolvimento
+.shots/
+
+# Estado local: dispositivos pareados, tokens, cache de sessões, identidade P2P.
+state/
+.userdata/
+
+# Dependência nativa do P2P (iroh), ~21 MB. Recriada por:
+#   pip3 install --target vendor iroh
+vendor/
+
+# Bytecode do Python (o sidecar do P2P)
+__pycache__/
+*.pyc
+
+# Nunca versionar segredos
+.env
+*.key
+*.pem

@@ -12,7 +12,7 @@
 │     │  session/event · approval/request                  │
 │     ▼                                                    │
 │   ┌────────────────────┐                                 │
-│   │ dsh-pockethound    │  plugin (outro repositório)      │
+│   │ dsh-pockethound    │  plugin (cópia em plugin/)       │
 │   │ ponte loopback     │  HTTP + SSE em 127.0.0.1:P      │
 │   └─────────┬──────────┘                                 │
 │             │                                            │
@@ -44,21 +44,37 @@ protocolo mora nele.
 
 ## Rodando
 
-O plugin precisa estar instalado no Harness (ele é o outro repositório):
+### 1. O plugin do Harness — é ele que abre a ponte
 
-```bash
-cd ~/dsh-plugins/pockethound && ./install.sh
-```
-
-Depois:
+Sem o plugin não existe ponte, e sem ponte o app abre e fica em *"aguardando a
+ponte do Harness"*. A cópia dele viaja **dentro deste repositório**, em
+`plugin/`, e a instalação é idempotente:
 
 ```bash
 cd "PocketHound desk"
+./plugin/install.sh
+```
+
+O que ele faz: copia o pacote para `~/.dsh/profiles/node_modules/dsh-pockethound`
+e registra a entry `pockethound` em `~/.dsh/cordis.patch.yml` (camada do usuário,
+então vale para todos os perfis e todos os workspaces). `--uninstall` desfaz.
+
+**O Harness precisa reiniciar depois** — plugin só carrega no boot. A partir daí
+a ponte escuta em `127.0.0.1` numa porta livre e publica o anúncio em
+`~/.dsh/pockethound/bridge.json` (modo 0600, token efêmero por boot).
+
+> `plugin/` é uma **cópia**. A fonte da verdade é o repositório próprio do plugin
+> (`~/dsh-plugins/pockethound`). `./scripts/sync-plugin.sh` sincroniza e
+> `./scripts/sync-plugin.sh --check` acusa divergência.
+
+### 2. O app do PC
+
+```bash
 npm install          # baixa o Electron
 npm start
 ```
 
-O app descobre a ponte sozinho, lendo `~/.dsh/pockethound/bridge.json`. Se o
+O app encontra a ponte sozinho, lendo `~/.dsh/pockethound/bridge.json`. Se o
 Harness reiniciar, o token muda e o app reconecta sem intervenção.
 
 ## Autoteste

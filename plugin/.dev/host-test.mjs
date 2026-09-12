@@ -380,9 +380,15 @@ check('a resposta do celular vence', (await respostaPromessa)?.answers?.[0]?.sel
 
 const antesTela = quadros.length
 const respostaDaTela = servicos.userQuestions.provider.ask({ agent: { id: 'sess-viva' }, questions: [{ id: 'q1', question: 'Outra?' }] })
+await sleep(40)
+const pedidoDaTela = quadros.slice(antesTela).find((q) => q.type === 'question.request')
 check('a tela do PC responde normalmente', (await respostaDaTela)?.answers?.[0]?.selected?.[0] === 'da tela')
 await sleep(80)
-const retiradaDaPergunta = quadros.slice(antesTela).find((q) => q.type === 'question.resolved')
+// Casado pelo requestId: o celular tambem publica resolucao agora, e procurar
+// "a ultima resolucao" mediria o caso anterior.
+const retiradaDaPergunta = quadros.find(
+  (q) => q.type === 'question.resolved' && q.payload?.requestId === pedidoDaTela?.payload?.requestId,
+)
 check('o cartao do celular e retirado quando a tela responde', retiradaDaPergunta?.payload?.by === 'desktop', retiradaDaPergunta?.payload)
 
 

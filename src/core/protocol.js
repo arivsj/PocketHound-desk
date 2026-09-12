@@ -31,6 +31,8 @@ const OUTBOUND = Object.freeze({
   PONG: 'pong',
   REPLAY_DONE: 'replay.done',
   BRIDGE_STATE: 'bridge.state',
+  /** Resposta a `workspace.list`: a lista de workspaces do harness. */
+  WORKSPACE_LIST: 'workspace.list',
 })
 
 /** Quadros que o celular envia ao PC. */
@@ -38,6 +40,8 @@ const INBOUND = Object.freeze({
   HELLO_ACK: 'hello.ack',
   SUBSCRIBE: 'subscribe',
   PROMPT_SEND: 'prompt.send',
+  WORKSPACE_LIST: 'workspace.list',
+  SESSION_CREATE: 'session.create',
   APPROVAL_DECIDE: 'approval.decide',
   QUESTION_ANSWER: 'question.answer',
   SESSION_CANCEL: 'session.cancel',

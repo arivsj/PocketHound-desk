@@ -229,6 +229,32 @@ class DshLink extends EventEmitter {
   }
 
   /**
+   * Lista os workspaces do Harness.
+   *
+   * E o que permite ao celular escolher ONDE trabalhar: sessao nao muda de
+   * pasta, entao mudar de workspace e abrir sessao nova la dentro.
+   *
+   * @returns {Promise<{workspaces: object[]}>} os workspaces do harness.
+   */
+  async workspaces() {
+    const announcement = this.readAnnouncement()
+    if (!announcement) throw new Error('ponte indisponível')
+    const response = await fetch('http://127.0.0.1:' + announcement.port + '/workspaces', {
+      headers: { Authorization: 'Bearer ' + announcement.token },
+    })
+    return response.json()
+  }
+
+  /**
+   * Cria uma sessao dentro de um workspace.
+   * @param {object} input - `{ workspaceId }` ou `{ path }`.
+   * @returns {Promise<object>} resposta da ponte.
+   */
+  async createSession(input) {
+    return this.#post('/session', input)
+  }
+
+  /**
    * Lista as aprovações pendentes na ponte.
    * @returns {Promise<object>} pendências e cursor atual.
    */

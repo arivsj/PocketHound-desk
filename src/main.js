@@ -160,6 +160,32 @@ transport.on('command', async ({ device, type, payload }) => {
         log('info', 'prompt do celular: ' + (result.ok ? 'entregue' : String(result.error)))
         break
       }
+      case INBOUND.WORKSPACE_LIST: {
+        // O POST do celular ja recebeu um ok generico; a LISTA viaja como quadro
+        // efemero, pelo mesmo caminho do desk.state. Assim o protocolo nao ganha
+        // um segundo formato de resposta so para isto.
+        const lista = await link.workspaces()
+        transport.publishEphemeral(OUTBOUND.WORKSPACE_LIST, { workspaces: lista.workspaces ?? [] })
+        log('info', 'workspaces do harness: ' + (lista.workspaces ?? []).length)
+        break
+      }
+      case INBOUND.SESSION_CREATE: {
+        const resultado = await link.createSession({
+          workspaceId: payload.workspaceId,
+          path: payload.path,
+        })
+        if (resultado.ok) {
+          log('info', 'sessao criada em ' + String(resultado.path ?? ''))
+        } else {
+          log('error', 'nao consegui criar sessao: ' + String(resultado.error ?? ''))
+          transport.publishEphemeral(OUTBOUND.NOTICE, {
+            level: 'error',
+            title: 'Não consegui criar a sessão',
+            body: String(resultado.error ?? ''),
+          })
+        }
+        break
+      }
       case INBOUND.APPROVAL_DECIDE: {
         const result = await link.decide({
           requestId: payload.requestId,

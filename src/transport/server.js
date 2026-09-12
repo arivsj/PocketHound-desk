@@ -31,6 +31,13 @@ const MAX_BODY = 256 * 1024
  */
 const BACKPRESSURE_BYTES = 512 * 1024
 
+/**
+ * Quantos batimentos com o buffer entupido antes de considerar a conexao morta.
+ * Tres batimentos de 15 s dao 45 s de tolerancia — tempo de uma rede movel
+ * trocar de torre sem perder o usuario.
+ */
+const MAX_STRIKES = 3
+
 /** Quadros efêmeros que o próximo substitui — podem ser descartados sem perda. */
 const SUBSTITUIVEIS = new Set(['desk.state', 'pong', 'replay.done'])
 
@@ -279,8 +286,9 @@ class TransportServer extends EventEmitter {
       })
       if (!resultado.ok) {
         this.stats.rejects += 1
-        // A mensagem é genérica de propósito: dizer "código errado" vs "código
-        // expirado" ajudaria quem está tentando adivinhar.
+        // O MOTIVO fica no log do PC; o cliente recebe sempre a mesma mensagem,
+        // para nao ajudar quem esta tentando adivinhar o codigo.
+        this.emit('pair-failed', { reason: resultado.error, code: String(corpo.code ?? '').length })
         this.#json(res, 401, { error: { code: 'PAIR_FAILED', message: 'código inválido ou expirado' } })
         return
       }
@@ -386,7 +394,16 @@ class TransportServer extends EventEmitter {
       'X-Accel-Buffering': 'no',
     })
 
-    const client = { device, cursor: cursor, since: Date.now(), dropped: 0, send: () => {} }
+    const client = {
+      device,
+      cursor,
+      since: Date.now(),
+      dropped: 0,
+      send: () => {},
+      // Fechar de verdade: um socket meio-aberto pode nunca responder ao FIN, e
+      // e justamente esse o caso que a faxina precisa encerrar.
+      end: () => { try { res.destroy() } catch { /* ja caiu */ } },
+    }
 
     /**
      * Entrega um quadro, respeitando a contrapressão do celular.
@@ -416,23 +433,71 @@ class TransportServer extends EventEmitter {
     client.send(frame(OUTBOUND.REPLAY_DONE, { from: cursor, to: this.#cursor() }, { seq: 0 }))
 
     client.cursor = this.#cursor()
+
+    // UM cliente por aparelho.
+    //
+    // O celular reconecta (troca de rede, app reaberto) e a conexao antiga pode
+    // ficar meio-aberta: o celular sumiu, o TCP ainda nao sabe, e escrever nela
+    // NAO da erro. Sem esta linha o desk acumulava conexoes mortas — chegamos a
+    // 32 — e nesse estado ele para de servir quem chega de verdade, deixando o
+    // app eternamente offline e com a conversa velha na tela.
+    for (const antigo of [...this.clients]) {
+      if (antigo.device?.id !== device.id) continue
+      this.#dropClient(antigo, 'reconectou')
+    }
+
     this.clients.add(client)
     this.stats.connects += 1
     this.emit('phones', this.clients.size)
 
+    /**
+     * Batimento e faxina.
+     *
+     * Alem de manter a conexao viva pelos proxies ociosos, o batimento mede o
+     * tamanho do buffer de escrita: num socket morto ele cresce sem parar, e um
+     * buffer que nao esvazia em tres batimentos e uma conexao que nao existe
+     * mais. Antes disso o cliente so saia quando a escrita falhava — e escrever
+     * para um socket meio-aberto nao falha.
+     */
     const beat = setInterval(() => {
-      try { res.write(': beat\n\n') } catch { /* conexão caiu */ }
+      try {
+        res.write(': beat\n\n')
+      } catch {
+        close()
+        return
+      }
+      if (res.writableLength > BACKPRESSURE_BYTES) {
+        client.strikes = (client.strikes ?? 0) + 1
+        if (client.strikes >= MAX_STRIKES) close()
+      } else {
+        client.strikes = 0
+      }
     }, 15000)
     if (typeof beat.unref === 'function') beat.unref()
 
     const close = () => {
       clearInterval(beat)
-      this.clients.delete(client)
-      this.emit('phones', this.clients.size)
-      try { res.end() } catch { /* já encerrado */ }
+      this.#dropClient(client, 'fechou')
     }
     req.on('close', close)
     req.on('error', close)
+  }
+
+  /**
+   * Tira um cliente da lista e encerra a conexao dele.
+   *
+   * Idempotente de proposito: o mesmo cliente pode ser retirado pelo fechamento
+   * do socket, pela faxina do batimento e pela reconexao do aparelho — e a
+   * primeira que chegar vale.
+   *
+   * @param {object} client - cliente a retirar.
+   * @param {string} motivo - motivo, para diagnostico.
+   */
+  #dropClient(client, motivo) {
+    if (!this.clients.delete(client)) return
+    client.motivo = motivo
+    this.emit('phones', this.clients.size)
+    try { client.end?.() } catch { /* ja encerrado */ }
   }
 }
 

@@ -36,6 +36,9 @@ servidor.on('listening', ({ port }) => {
 servidor.on('phones', (n) => console.log('HEADLESS_PHONES ' + n))
 servidor.on('paired', (d) => console.log('HEADLESS_PAIRED ' + JSON.stringify({ id: d.id, name: d.name })))
 servidor.on('bind-error', (e) => console.log('HEADLESS_BIND_ERROR ' + e.message))
+// O motivo real da recusa: o cliente recebe sempre a mesma mensagem, entao sem
+// isto nao ha como saber POR QUE um pareamento falhou.
+servidor.on('pair-failed', (info) => console.log('HEADLESS_PAIR_FAILED ' + JSON.stringify(info)))
 
 servidor.start()
 

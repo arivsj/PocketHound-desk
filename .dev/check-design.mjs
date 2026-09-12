@@ -282,7 +282,9 @@ if (existsSync(ANDROID)) {
   // português (\`val sessao = ...\`) como se fosse texto de interface.
   const semAcento = []
   for (const file of ktFiles) {
-    for (const linha of readFileSync(file, 'utf8').split('\n')) {
+    // Comentario nao e interface: um KDoc pode citar o sintoma de um bug
+    // ("a camera nao le nada") sem que isso vire texto para o usuario.
+    for (const linha of semComentarios(readFileSync(file, 'utf8')).split('\n')) {
       for (const conteudo of linha.match(/"([^"\\]*)"/g) ?? []) {
         const texto = conteudo.slice(1, -1)
         if (texto.length < 4) continue

@@ -28,6 +28,25 @@
     └────────────────────┘
 ```
 
+### As dependências para isto funcionar
+
+| plugin | para que serve | sem ele |
+|---|---|---|
+| [`pockethound`](https://github.com/arivsj/dsh-plugins/tree/main/pockethound) | observa as sessões do Harness e abre a **ponte** de loopback que este app consome | **nada funciona**: o app abre e fica em *"aguardando a ponte do Harness"* |
+| [`session-cost`](https://github.com/arivsj/dsh-plugins/tree/main/session-cost) | gasto da sessão em US$ (com preço por horário) e ocupação do contexto | o app funciona igual; só não aparece a linha de valor no rodapé |
+
+Os dois vivem no repositório **[arivsj/dsh-plugins](https://github.com/arivsj/dsh-plugins)**,
+que é a fonte da verdade e a distribuição:
+
+```bash
+cd ~/dsh-plugins && ./install-all.sh    # instala todos, em todos os perfis do Harness
+./doctor.sh                             # confere o que ficou instalado
+```
+
+O `pockethound` também viaja **copiado** neste repositório, em `plugin/`, porque sem a
+ponte não há app — quem clona precisa conseguir usar (ver *Rodando*, abaixo). Os
+demais plugins não são copiados: o repositório deles já é a distribuição.
+
 ## Como as peças se encaixam
 
 | Módulo | Papel |
@@ -66,6 +85,23 @@ a ponte escuta em `127.0.0.1` numa porta livre e publica o anúncio em
 > `plugin/` é uma **cópia**. A fonte da verdade é o repositório próprio do plugin
 > (`~/dsh-plugins/pockethound`). `./scripts/sync-plugin.sh` sincroniza e
 > `./scripts/sync-plugin.sh --check` acusa divergência.
+
+### 1b. O plugin do custo (opcional) — de onde vem o valor em dólar
+
+O rodapé do celular mostra quanto a sessão gastou. Esse número **não nasce aqui**:
+ele vem do plugin `session-cost`, que faz a conta dentro do Harness com o preço por
+horário da API DeepSeek (pico custa o dobro), junto com o medidor de contexto do
+próprio Harness. **Sem ele o app funciona igual** — a linha do rodapé só não aparece.
+
+```bash
+cd ~/dsh-plugins && ./install-all.sh
+```
+
+Ele **não** viaja copiado dentro deste repositório, ao contrário da ponte. O motivo é
+o mesmo que criou a cópia da ponte, lido ao contrário: sem a ponte o app não fala com
+nada, mas sem o custo ele apenas mostra menos. Uma segunda cópia seria mais uma para
+sair de sincronia, e o repositório dos plugins já **é** a distribuição:
+<https://github.com/arivsj/dsh-plugins>.
 
 ### 2. O app do PC
 

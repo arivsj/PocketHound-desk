@@ -28,6 +28,21 @@ import { projectSessionEvent, OUTBOUND } from './protocol.js'
 
 const name = 'pockethound'
 
+/**
+ * "Sem prazo" para o cartão do celular quando o PC também está perguntando.
+ *
+ * Com `shareWithDesktop`, as duas telas perguntam juntas e a primeira resposta
+ * vale. Nesse desenho o prazo do celular não protege nada — ele só RETIRA o
+ * cartão do bolso enquanto a pergunta continua aberta no PC. Era o que fazia
+ * quem pegava o celular um minuto e meio depois não ter mais onde responder, com
+ * a sessão parada esperando alguém que estava com o celular na mão.
+ *
+ * Não é `Infinity` por um detalhe do Node: `setTimeout` com valor acima de
+ * 2^31-1 estoura e dispara NA HORA — o oposto do que se quer aqui. Este é o
+ * maior valor aceito (24,8 dias): na prática, "até alguém responder".
+ */
+const SEM_PRAZO_MS = 2 ** 31 - 1
+
 // Sem dependência obrigatória: o plugin ativa em QUALQUER perfil (web,
 // headless, futuros). Tudo que precisa de um serviço específico entra em
 // `ctx.inject`, que só roda onde o serviço existir — declarar aqui deixaria a
@@ -194,6 +209,14 @@ function apply(ctx, config) {
       if (!payload) return
       hub.sessionUpsert(describeSession(session))
       hub.publishTurnEvent(id, payload)
+      // Custo e contexto NAO vem do evento: vem das projecoes que o harness ja
+      // mantem. Ler em vez de recalcular aqui e o que garante que o celular
+      // mostre o MESMO numero do navegador — o preco por horario (pico e fora de
+      // pico) fica num lugar so, no plugin session-cost.
+      if (payload.kind === 'text.done' || payload.kind === 'turn.end') {
+        const retrato = retratoDaSessao(ctx, session)
+        if (retrato) hub.publishTurnEvent(id, retrato)
+      }
     }
     const offCreated = ctx.on('session/created', onCreated)
     const offDisposed = ctx.on('session/disposed', onDisposed)
@@ -224,7 +247,15 @@ function apply(ctx, config) {
           reason: request.reason,
           args: argumentsForApproval(ctx, request),
           signal: request.signal,
-          timeoutMs: config.approvalTimeoutMs,
+          // Com o PC perguntando junto, o celular não tem prazo próprio: o cartão
+          // vive enquanto a aprovação viver. Sozinho, ele mantém o prazo curto —
+          // aí sim o estouro é o que passa a pergunta para o respondente normal.
+          timeoutMs: config.shareWithDesktop ? SEM_PRAZO_MS : config.approvalTimeoutMs,
+          // E, com o PC na corrida, o pedido não pode ser descartado só porque o
+          // celular estava FECHADO neste instante: ele fica guardado, à espera de
+          // quem abrir o app. Era isso que fazia a aprovação pendente não existir
+          // para o celular — o PC recebia, o app abria, e não havia cartão algum.
+          waitForPhone: config.shareWithDesktop,
           onRequest: (frame) => { requestId = frame.requestId },
         })
 
@@ -295,7 +326,10 @@ function apply(ctx, config) {
               sessionId: String(request?.agent?.id ?? ''),
               questions: request?.questions ?? [],
               signal: request?.signal,
-              timeoutMs: config.questionTimeoutMs,
+              // Mesma razão da aprovação: a tela do PC está perguntando junto,
+              // então o cartão do celular não pode se retirar sozinho.
+              timeoutMs: SEM_PRAZO_MS,
+              waitForPhone: true,
               onRequest: (frame) => { requestId = frame.requestId },
             })
             // O contrato do provedor e { answers }. O hub devolve so a lista, e
@@ -680,6 +714,58 @@ async function resolveAgentForPrompt(ctx, sessionId, allowResume, log) {
     log('não consegui resumir ' + sessionId + ': ' + (error?.message ?? error))
   }
   return undefined
+}
+
+/**
+ * Custo em dolar e ocupacao de contexto de uma sessao, lidos das projecoes.
+ *
+ * Duas fontes, nenhuma conta nova:
+ *
+ *   - `sessionCost` (plugin session-cost): o gasto em US$, tarifado no horario de
+ *     cada requisicao;
+ *   - `contextPressure` (dsh-token-meter): quantos tokens a proxima requisicao vai
+ *     levar e qual e a janela do modelo.
+ *
+ * Devolve null quando nenhuma das duas existe — perfil sem os plugins, sessao
+ * vazia, servico invisivel. O celular simplesmente nao mostra a linha.
+ *
+ * @param {import('@deepseek-ai/cordis').Context} ctx - contexto do harness.
+ * @param {object} session - sessao dona do retrato.
+ * @returns {object|null} payload `stats` para o celular, ou null.
+ */
+function retratoDaSessao(ctx, session) {
+  try {
+    const projecoes = servico(ctx, 'sessionProjections')
+    if (!projecoes || typeof projecoes.snapshot !== 'function') return null
+    const { values } = projecoes.snapshot(session)
+    const custo = values?.sessionCost
+    const uso = values?.tokenUsage
+    const pressao = values?.contextPressure
+    if (!custo && !uso && !pressao) return null
+    const entrada = (uso?.uncachedInputTokens ?? 0) + (uso?.cacheReadTokens ?? 0) + (uso?.cacheWriteTokens ?? 0)
+    return {
+      kind: 'stats',
+      at: Date.now(),
+      usd: Number(custo?.usd ?? 0),
+      usdPico: Number(custo?.usdPico ?? 0),
+      entrada,
+      saida: Number(uso?.outputTokens ?? 0),
+      cache: Number(uso?.cacheReadTokens ?? 0),
+      modelo: typeof custo?.modelo === 'string' ? custo.modelo : undefined,
+      // `projectedTokens` e a ocupacao que a PROXIMA requisicao vai levar;
+      // `pressureTokens` e a ultima medida. O primeiro e o que interessa para
+      // saber se o contexto esta enchendo.
+      contextoUsado: Number.isFinite(pressao?.projectedTokens)
+        ? pressao.projectedTokens
+        : (Number.isFinite(pressao?.pressureTokens) ? pressao.pressureTokens : undefined),
+      contextoJanela: Number.isFinite(pressao?.contextWindow) ? pressao.contextWindow : undefined,
+    }
+  } catch (error) {
+    // Degrada em silencio: o retrato e enfeite de rodape e nao pode derrubar o
+    // fluxo de quadros que ja funcionava.
+    log('nao consegui ler as projecoes: ' + (error?.message ?? error))
+    return null
+  }
 }
 
 /**

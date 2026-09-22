@@ -52,6 +52,14 @@ const transport = new TransportServer({
   store,
   port: store.config.port,
   host: store.config.bindHost,
+  // Estado, não história: vai junto com o replay a CADA conexão, para quem
+  // entra de novo no app ver o cartão de aprovação pendente e a lista de
+  // sessões mesmo que o quadro original já tenha saído do replay. As duas
+  // funções leem os mapas preenchidos logo abaixo (por isso são closures).
+  sessions: () => [...sessions.values()],
+  pendingApprovals: () => [...pendingApprovals.values()],
+  pendingQuestions: () => [...pendingQuestions.values()],
+  stats: () => [...retratos.entries()].map(([session, payload]) => ({ session, payload })),
 })
 
 /** Histórico de decisões, para a tela de aprovações. */
@@ -96,6 +104,24 @@ const sessions = new Map()
 const pendingApprovals = new Map()
 
 /**
+ * @type {Map<string, object>} perguntas do agente esperando resposta.
+ *
+ * O desk guarda para poder REAPRESENTAR: quem abre o app depois de o agente
+ * perguntar precisa ver a pergunta, e o quadro original pode já ter saído do
+ * replay (que tem teto). Mesmo motivo das aprovações pendentes.
+ */
+const pendingQuestions = new Map()
+
+/**
+ * @type {Map<string, object>} último retrato de custo/contexto por sessão.
+ *
+ * Também é ESTADO, não história: quem abre o app precisa ver o gasto e a
+ * ocupação do contexto mesmo que o quadro tenha sido publicado antes do cursor
+ * dele — ou antes do teto do replay. Mesmo motivo das aprovações pendentes.
+ */
+const retratos = new Map()
+
+/**
  * Avisa a interface de que algo mudou.
  * @param {string} channel - canal (`snapshot`).
  * @param {unknown} payload - conteúdo.
@@ -112,13 +138,21 @@ link.on('frame', (incoming) => {
 
   // 2. mantém o espelho local que a interface mostra.
   if (incoming.type === OUTBOUND.SESSION_UPSERT) sessions.set(incoming.payload.id, incoming.payload)
-  if (incoming.type === OUTBOUND.SESSION_GONE) sessions.delete(incoming.payload.id)
+  if (incoming.type === OUTBOUND.SESSION_GONE) {
+    sessions.delete(incoming.payload.id)
+    retratos.delete(incoming.payload.id)
+  }
   if (incoming.type === OUTBOUND.APPROVAL_REQUEST) pendingApprovals.set(incoming.payload.requestId, incoming.payload)
   if (incoming.type === OUTBOUND.APPROVAL_RESOLVED) {
     const request = pendingApprovals.get(incoming.payload.requestId)
     pendingApprovals.delete(incoming.payload.requestId)
     history.unshift({ ...incoming.payload, at: incoming.ts, request })
     if (history.length > HISTORY_LIMIT) history.length = HISTORY_LIMIT
+  }
+  if (incoming.type === OUTBOUND.QUESTION_REQUEST) pendingQuestions.set(incoming.payload.requestId, incoming.payload)
+  if (incoming.type === OUTBOUND.QUESTION_RESOLVED) pendingQuestions.delete(incoming.payload.requestId)
+  if (incoming.type === OUTBOUND.TURN_EVENT && incoming.payload?.kind === 'stats' && incoming.session) {
+    retratos.set(incoming.session, incoming.payload)
   }
 
   recentFrames.push({ seq: incoming.seq, type: incoming.type, ts: incoming.ts, session: incoming.session })

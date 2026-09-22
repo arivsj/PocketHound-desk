@@ -96,12 +96,26 @@ class TransportServer extends EventEmitter {
    * @param {import('../core/config.js').Store} options.store - configuração e dispositivos.
    * @param {number} options.port - porta de escuta.
    * @param {string} options.host - interface de escuta.
+   * @param {() => object[]} [options.sessions] - sessões conhecidas agora.
+   * @param {() => object[]} [options.pendingApprovals] - aprovações pendentes agora.
    */
   constructor(options) {
     super()
     this.store = options.store
     this.host = options.host ?? '0.0.0.0'
     this.port = options.port ?? 7411
+    /**
+     * Estado que TODO celular que conecta precisa saber, independente do cursor.
+     *
+     * O replay do anel é história, e história ganhou teto (`tail`). Estado não
+     * pode ter teto: uma aprovação pendente de dois minutos atrás, ou a lista de
+     * sessões, não podem depender de caber nos últimos N quadros — foi assim que
+     * o cartão de aprovação deixou de aparecer para quem entrava de novo no app.
+     */
+    this.listSessions = options.sessions ?? (() => [])
+    this.listPendingApprovals = options.pendingApprovals ?? (() => [])
+    this.listPendingQuestions = options.pendingQuestions ?? (() => [])
+    this.listStats = options.stats ?? (() => [])
     this.server = null
     this.beacon = null
     /** @type {Set<{send: Function, device: object, cursor: number}>} */
@@ -453,6 +467,29 @@ class TransportServer extends EventEmitter {
     const recorte = Number.isFinite(tail) && tail > 0 ? perdeu.slice(-tail) : perdeu
     for (const buffered of recorte) client.send(buffered)
     client.send(frame(OUTBOUND.REPLAY_DONE, { from: cursor, to: this.#cursor() }, { seq: 0 }))
+
+    // Estado de agora, junto com o fluxo.
+    //
+    // Vai com `seq: 0` de propósito: é retrato do presente, não linha do tempo.
+    // Não anda o cursor do celular e não entra no anel, então pode ser repetido a
+    // cada conexão sem consequência. É isto que faz o cartão de aprovação
+    // aparecer para quem abre o app depois de o agente pedir — sem depender de o
+    // pedido ter caído dentro do replay.
+    for (const sessao of this.listSessions()) {
+      client.send(frame(OUTBOUND.SESSION_UPSERT, sessao, { seq: 0 }))
+    }
+    for (const pedido of this.listPendingApprovals()) {
+      client.send(frame(OUTBOUND.APPROVAL_REQUEST, pedido, { seq: 0, session: pedido.sessionId }))
+    }
+    for (const pergunta of this.listPendingQuestions()) {
+      client.send(frame(OUTBOUND.QUESTION_REQUEST, pergunta, { seq: 0, session: pergunta.sessionId }))
+    }
+    // O retrato do rodapé (gasto em dólar e ocupação do contexto) também é
+    // estado: vai a cada conexão, para o celular abrir já sabendo quanto a
+    // sessão custou, sem depender de o quadro ter caído dentro do replay.
+    for (const { session, payload } of this.listStats()) {
+      client.send(frame(OUTBOUND.TURN_EVENT, payload, { seq: 0, session }))
+    }
 
     client.cursor = this.#cursor()
 

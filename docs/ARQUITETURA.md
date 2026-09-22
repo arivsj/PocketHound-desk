@@ -9,9 +9,14 @@ Repositórios:
 
 | Repositório | Caminho | Papel |
 |---|---|---|
-| `dsh-pockethound` | `~/dsh-plugins/pockethound` | Plugin do DSH: observa a sessão, expõe a ponte interna |
+| [`dsh-plugins`](https://github.com/arivsj/dsh-plugins) | `~/dsh-plugins` | **dependência**: os plugins do Harness que fazem este app funcionar |
+| ├─ `pockethound` | `~/dsh-plugins/pockethound` | Plugin do DSH: observa a sessão, expõe a ponte interna (**obrigatório**) |
+| └─ `session-cost` | `~/dsh-plugins/session-cost` | Gasto da sessão em US$ e contexto (opcional: sem ele o rodapé não mostra o valor) |
 | **PocketHound desk** | `/media/.../backup/dev/PocketHound desk` | App do PC: núcleo, P2P, UI desktop |
 | **PocketHound** | `~/AndroidStudioProjects/PocketHound` | App Android: controle e aprovação |
+
+Para instalar as dependências de uma vez: `cd ~/dsh-plugins && ./install-all.sh`, e
+depois **reiniciar o Harness** (plugin só carrega no boot).
 
 ```
 ┌──────────────────────── PC ─────────────────────────┐

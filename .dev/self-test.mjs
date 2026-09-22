@@ -243,6 +243,80 @@ console.log('pareamento pelo celular — a rota que faltava')
   rmSync(dir, { recursive: true, force: true })
 }
 
+console.log('estado entra junto com o fluxo — não depende do replay')
+{
+  const dir = mkdtempSync(join(tmpdir(), 'pockethound-estado-'))
+  const s = new Store(dir)
+  const sessao = { id: 'session-do-teste', title: 'conversa do teste', workspace: '/tmp', status: 'live' }
+  const pedido = {
+    requestId: 'req-do-teste',
+    sessionId: 'session-do-teste',
+    toolName: 'bash',
+    reason: 'rodar algo',
+    args: { command: 'ls' },
+    expiresAt: Date.now() + 60000,
+  }
+  const pergunta = {
+    requestId: 'pergunta-do-teste',
+    sessionId: 'session-do-teste',
+    questions: [{ id: 'q1', question: 'sigo?', options: [] }],
+    expiresAt: Date.now() + 60000,
+  }
+  const srv = new TransportServer({
+    store: s,
+    port: 0,
+    host: '127.0.0.1',
+    sessions: () => [sessao],
+    pendingApprovals: () => [pedido],
+    pendingQuestions: () => [pergunta],
+  })
+  srv.start()
+  await sleep(140)
+  const raiz = 'http://127.0.0.1:' + srv.port
+  const codigo = s.createPairingCode(60)
+  const par = s.pair({ code: codigo.code, name: 'celular' })
+  const auth = { Authorization: 'Bearer ' + par.token }
+
+  // `tail=1` é o pior caso possível: o replay é cortado ao mínimo, e é assim que
+  // o cartão de aprovação sumia para quem entrava de novo no app.
+  const resposta = await fetch(raiz + '/ph/stream?cursor=0&tail=1', { headers: auth })
+  const leitor = resposta.body.getReader()
+  const decodificador = new TextDecoder()
+  const quadros = []
+  let sobra = ''
+  const bombeia = (async () => {
+    try {
+      for (;;) {
+        const { value, done } = await leitor.read()
+        if (done) break
+        sobra += decodificador.decode(value, { stream: true })
+        let corte
+        while ((corte = sobra.indexOf('\n\n')) !== -1) {
+          const blocoTexto = sobra.slice(0, corte)
+          sobra = sobra.slice(corte + 2)
+          const linha = blocoTexto.split('\n').find((entrada) => entrada.startsWith('data: '))
+          if (linha) quadros.push(JSON.parse(linha.slice(6)))
+        }
+      }
+    } catch { /* encerrado no fim */ }
+  })()
+
+  await sleep(400)
+  const aprovacao = quadros.find((q) => q.type === 'approval.request')
+  const sessaoRecebida = quadros.find((q) => q.type === 'session.upsert')
+  check('aprovação pendente chega mesmo com o replay cortado', aprovacao?.payload?.requestId === 'req-do-teste', aprovacao)
+  check('a aprovação diz de que sessão é', aprovacao?.session === 'session-do-teste', aprovacao?.session)
+  check('sessão conhecida chega junto', sessaoRecebida?.payload?.id === 'session-do-teste')
+  check('estado vai como efêmero (não anda o cursor)', aprovacao?.seq === 0 && sessaoRecebida?.seq === 0, [aprovacao?.seq, sessaoRecebida?.seq])
+  const perguntaRecebida = quadros.find((q) => q.type === 'question.request')
+  check('pergunta pendente chega junto', perguntaRecebida?.payload?.requestId === 'pergunta-do-teste', perguntaRecebida)
+  check('o fim do replay é anunciado', quadros.some((q) => q.type === 'replay.done'))
+
+  await leitor.cancel().catch(() => {})
+  void bombeia
+  srv.stop()
+  rmSync(dir, { recursive: true, force: true })
+}
 console.log('porta ocupada não derruba o desk')
 {
   const ocupada = server.port

@@ -11,8 +11,10 @@
 
 | Repositório | Caminho | Estado |
 |---|---|---|
-| `dsh-pockethound` | `~/dsh-plugins/pockethound` | **funcional**, instalado no harness, 26 testes passando |
-| **PocketHound desk** | `/media/.../backup/dev/PocketHound desk` | **núcleo funcional**, 33 testes passando + 13 de ponta a ponta |
+| [`dsh-plugins`](https://github.com/arivsj/dsh-plugins) | `~/dsh-plugins` | **dependência**: os plugins do Harness |
+| ├─ `pockethound` | `~/dsh-plugins/pockethound` | **funcional**, instalado no harness, 50 testes passando (obrigatório) |
+| └─ `session-cost` | `~/dsh-plugins/session-cost` | **funcional**, 16 testes + sonda de navegador (opcional) |
+| **PocketHound desk** | `/media/.../backup/dev/PocketHound desk` | **núcleo funcional**, 63 testes passando + 13 de ponta a ponta |
 | **PocketHound** (Android) | `~/AndroidStudioProjects/PocketHound` | **compila, 51 testes de JVM + 1 no aparelho, APK gerado** |
 
 ---

@@ -370,11 +370,18 @@ app.whenReady().then(() => {
   }
 
   // Farol de descoberta na LAN.
+  //
+  // `devices` é o que permite o celular CONFIAR no farol: só os ids, nunca o
+  // hash do token (que não sai do disco). Com isso o app aceita um endereço
+  // descoberto apenas quando ele vem de um PC que conhece aquele aparelho — sem
+  // isso, um farol forjado na mesma rede faria o celular entregar o token a um
+  // estranho.
   const beaconTimer = setInterval(() => {
     if (!store.config.advertise) return
     transport.announce({
       name: require('node:os').hostname(),
       mode: store.config.transportMode,
+      devices: store.listDevices().map((device) => device.id),
     })
   }, 3000)
 

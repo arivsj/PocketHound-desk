@@ -38,8 +38,16 @@ const BACKPRESSURE_BYTES = 512 * 1024
  */
 const MAX_STRIKES = 3
 
-/** Quadros efêmeros que o próximo substitui — podem ser descartados sem perda. */
-const SUBSTITUIVEIS = new Set(['desk.state', 'pong', 'replay.done'])
+/**
+ * Quadros efêmeros que o próximo substitui — podem ser descartados sem perda.
+ *
+ * `replay.done` NÃO está aqui de propósito, embora seja minúsculo. Ele era
+ * descartado justamente quando o celular estava para trás — isto é, no fim de um
+ * replay grande, que é quando ele mais importa. O app conta o replay por ele;
+ * perdido, a tela ficava esperando um fim que nunca chegava. Um quadro de
+ * controle não pode ser "substituível" se alguém depende dele.
+ */
+const SUBSTITUIVEIS = new Set(['desk.state', 'pong'])
 
 /**
  * Um quadro pode ser descartado quando o celular está para trás?
@@ -217,7 +225,13 @@ class TransportServer extends EventEmitter {
 
   /**
    * Anuncia a presença do PC na rede local.
-   * @param {object} info - o que anunciar (`name`, `version`, `mode`).
+   *
+   * `dev` são só os IDS dos aparelhos pareados — jamais o hash do token. É o que
+   * deixa o celular decidir se pode seguir o endereço anunciado: um farol forjado
+   * na mesma rede não sabe o id de um aparelho de verdade, então o app o ignora
+   * em vez de entregar a única credencial do Harness a um estranho.
+   *
+   * @param {object} info - o que anunciar (`name`, `version`, `mode`, `devices`).
    */
   announce(info) {
     if (!this.beacon) return
@@ -227,6 +241,7 @@ class TransportServer extends EventEmitter {
       port: this.port,
       name: info.name,
       mode: info.mode,
+      dev: Array.isArray(info.devices) ? info.devices.map(String) : [],
       at: Date.now(),
     }))
     try {
@@ -427,9 +442,16 @@ class TransportServer extends EventEmitter {
     }
 
     // Replay do que o celular perdeu antes do stream ao vivo.
-    for (const buffered of this.ring) {
-      if (Number(buffered.seq) > cursor) client.send(buffered)
-    }
+    //
+    // `tail` é um teto opcional: o celular que ficou muito tempo fora pede só os
+    // últimos N quadros em vez do buraco inteiro. Sem ele, uma volta depois de
+    // horas empurrava ~700 KB pelo rádio antes de a primeira mensagem nova
+    // aparecer — e o que interessa está no FIM dessa fila. Sem o parâmetro, o
+    // comportamento é o de sempre.
+    const perdeu = this.ring.filter((buffered) => Number(buffered.seq) > cursor)
+    const tail = Number(url.searchParams.get('tail') ?? '0')
+    const recorte = Number.isFinite(tail) && tail > 0 ? perdeu.slice(-tail) : perdeu
+    for (const buffered of recorte) client.send(buffered)
     client.send(frame(OUTBOUND.REPLAY_DONE, { from: cursor, to: this.#cursor() }, { seq: 0 }))
 
     client.cursor = this.#cursor()

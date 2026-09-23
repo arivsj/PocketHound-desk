@@ -1,6 +1,6 @@
 {
   "name": "pockethound-desk",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "private": true,
   "description": "PocketHound desk — o lado PC do PocketHound: liga o DeepSeek Harness ao seu celular por P2P, transmite o que o agente produz e deixa você aprovar tudo do bolso.",
   "main": "src/main.js",

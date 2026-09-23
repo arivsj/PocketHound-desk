@@ -27,3 +27,9 @@ __pycache__/
 .env
 *.key
 *.pem
+
+# Contexto local de desenvolvimento — nao vao pro GitHub (regra de casa,
+# mesmo espirito do PENDENCIAS.md do Android). REMOVER quando o marco
+# for de fato implementado.
+docs/MEMORIA.md
+docs/AGENTES-LOCAIS.md
